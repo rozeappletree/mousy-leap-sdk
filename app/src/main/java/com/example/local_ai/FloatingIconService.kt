@@ -75,9 +75,7 @@ class FloatingIconService : Service() {
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    val deltaX = event.rawX - initialTouchX
                     val deltaY = event.rawY - initialTouchY
-                    params.x = initialX + deltaX.toInt()
                     params.y = initialY + deltaY.toInt()
                     windowManager.updateViewLayout(floatingView, params)
                     true
