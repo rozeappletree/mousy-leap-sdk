@@ -9,7 +9,7 @@
         android:id="@+id/floating_icon_image"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        android:src="@mipmap/ic_launcher"
+        android:src="@mipmap/ic_mousy"
         android:contentDescription="Floating Icon" />
 
     <TextView
@@ -17,7 +17,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
-        android:background="@android:color/darker_gray"
+        android:layout_marginStart="4dp"
+        android:background="@drawable/rounded_background"
         android:padding="8dp"
         android:textColor="@android:color/white"
         android:visibility="gone" />
