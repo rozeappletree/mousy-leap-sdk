@@ -72,7 +72,7 @@ class FloatingIconService : Service() {
     companion object {
         const val MODEL_SLUG = "lfm2-1.2b"
         const val QUANTIZATION_SLUG = "lfm2-1.2b-20250710-8da4w"
-        const val SYSTEM_PROMPT = "Generate a short, insightful, and unique quote."
+        const val SYSTEM_PROMPT = "Generate a short, insightful, and unique quote. Try to be creative and fun, and be as random as possible."
         const val QUOTE_REFRESH_INTERVAL_MS = 5000L
         const val NOTIFICATION_CHANNEL_ID = "FloatingIconServiceChannel"
         const val NOTIFICATION_ID = 1
