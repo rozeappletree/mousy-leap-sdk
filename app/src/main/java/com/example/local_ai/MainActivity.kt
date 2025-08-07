@@ -63,7 +63,6 @@ class MainActivity : ComponentActivity() {
 
     private val modelRunner = MutableLiveData<ModelRunner?>(null)
     private var conversation: Conversation? = null
-    private val currentQuote = MutableLiveData("Loading quote...")
     private val modelLoadingStatus = MutableLiveData("Initializing model loading...")
     private var quoteGenerationJob: Job? = null
     private val gson = GsonBuilder().registerLeapAdapters().create()
@@ -78,7 +77,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             LocalaiTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    val quoteText by currentQuote.observeAsState()
                     val loadingStatus by modelLoadingStatus.observeAsState()
                     val isModelLoaded = modelRunner.observeAsState().value != null
 
@@ -89,13 +87,12 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (isModelLoaded) {
-                            Text(text = quoteText ?: "No quote yet")
-                        } else {
+                        if (!isModelLoaded) {
                             Text(text = loadingStatus ?: "Loading...")
+                        } else {
+                            Text(text = "Model loaded. Quotes will appear in floating icon.")
                         }
 
-                        // Button for overlay permission (optional, can be removed if not needed)
                         Button(onClick = {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this@MainActivity)) {
                                 val intent = Intent(
@@ -104,7 +101,8 @@ class MainActivity : ComponentActivity() {
                                 )
                                 startActivityForResult(intent, OVERLAY_PERMISSION_REQUEST_CODE)
                             } else {
-                                startFloatingIconService()
+                                // Start service without initial text, it will be updated by quote generation
+                                startFloatingIconService(null)
                             }
                         }) {
                             Text("Show Floating Icon")
@@ -126,7 +124,6 @@ class MainActivity : ComponentActivity() {
                     modelLoadingStatus.value = status
                 }
             )
-            // Once model is loaded, modelRunner will be updated, triggering quote generation
         }
 
         modelRunner.observe(this) { runner ->
@@ -179,61 +176,67 @@ class MainActivity : ComponentActivity() {
 
             val modelFile = modelDownloader.getModelFile(modelToUse)
             onStatusChange("Loading model from: ${modelFile.path}")
-            modelRunner.postValue(LeapClient.loadModel(modelFile.path)) // Use postValue for background thread
-        } catch (e: Exception) { // Catch generic exception for broader error handling
+            modelRunner.postValue(LeapClient.loadModel(modelFile.path))
+        } catch (e: Exception) {
             onError(e)
         }
     }
 
     private fun generateQuote() {
-        val runner = modelRunner.value ?: return // Ensure model is loaded
+        val runner = modelRunner.value ?: return
 
-        // Initialize conversation if it's null or use existing
         if (conversation == null) {
             conversation = runner.createConversation(SYSTEM_PROMPT)
         }
 
         quoteGenerationJob = lifecycleScope.launch {
-            currentQuote.value = "Generating new quote..." // Show generating state
             val responseBuffer = StringBuilder()
             try {
-                conversation!!.generateResponse("Tell me a quote.") // Simple prompt for a quote
+                conversation!!.generateResponse("Tell me a quote.")
                     .onEach { response ->
                         when (response) {
                             is MessageResponse.Chunk -> responseBuffer.append(response.text)
-                            else -> {} // Handle other response types if necessary
+                            else -> {}
                         }
                     }
                     .onCompletion { throwable ->
                         if (throwable == null) {
-                            currentQuote.value = responseBuffer.toString().trim()
+                            val quote = responseBuffer.toString().trim()
+                            startFloatingIconService(quote)
                         } else {
-                            currentQuote.value = "Error generating quote: ${throwable.message}"
                             Log.e("MainActivity", "Quote generation error", throwable)
+                            // Optionally, send error to floating icon or handle differently
+                            // startFloatingIconService("Error: Could not generate quote")
                         }
                     }
                     .catch { e ->
-                        currentQuote.value = "Exception during quote generation: ${e.message}"
                         Log.e("MainActivity", "Quote generation exception", e)
+                        // Optionally, send error to floating icon or handle differently
+                        // startFloatingIconService("Error: Exception during quote generation")
                     }
                     .collect()
             } catch (e: Exception) {
-                 currentQuote.value = "Failed to start quote generation: ${e.message}"
                  Log.e("MainActivity", "Failed to start quote generation", e)
+                 // Optionally, send error to floating icon or handle differently
+                 // startFloatingIconService("Error: Failed to start quote generation")
             }
         }
     }
 
 
-    private fun startFloatingIconService() {
-        startService(Intent(this, FloatingIconService::class.java))
+    private fun startFloatingIconService(text: String?) {
+        val intent = Intent(this, FloatingIconService::class.java)
+        text?.let {
+            intent.putExtra("text_to_display", it)
+        }
+        startService(intent)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == OVERLAY_PERMISSION_REQUEST_CODE) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-                startFloatingIconService()
+                startFloatingIconService(null) // Start service, text will be updated by generator
             }
         }
     }

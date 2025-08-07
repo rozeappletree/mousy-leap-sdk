@@ -37,6 +37,9 @@ class FloatingIconService : Service() {
     private var screenHeight: Int = 0
     private var screenWidth: Int = 0
 
+    // Handler for auto-hiding text, if needed in the future for other messages.
+    private val textDisplayHandler = Handler(Looper.getMainLooper())
+
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
@@ -88,12 +91,8 @@ class FloatingIconService : Service() {
         screenHeight = displayMetrics.heightPixels
         screenWidth = displayMetrics.widthPixels
 
-
-        // Show dummy text and hide after 3 seconds
-        updateText("Dummy Text")
-        Handler(Looper.getMainLooper()).postDelayed({
-            updateText("")
-        }, 3000)
+        // Text will be set by onStartCommand, removing dummy text logic
+        updateText("") // Initially hide or clear text
 
         floatingView.setOnTouchListener { _, event ->
             when (event.action) {
@@ -109,9 +108,8 @@ class FloatingIconService : Service() {
                     val deltaY = event.rawY - initialTouchY
                     params.y = initialY + deltaY.toInt()
                     windowManager.updateViewLayout(floatingView, params)
-                    // Check for overlap with bin icon
                     if (isViewOverlapping(floatingView, binView)) {
-                        binView.setColorFilter(getColor(R.color.red)) // Highlight bin when icon is over it
+                        binView.setColorFilter(getColor(R.color.red))
                     } else {
                         binView.clearColorFilter()
                     }
@@ -122,13 +120,10 @@ class FloatingIconService : Service() {
                     val deltaX = event.rawX - initialTouchX
                     val deltaY = event.rawY - initialTouchY
                     if (Math.abs(deltaX) < clickThreshold && Math.abs(deltaY) < clickThreshold) {
-                        // Click detected
                         Toast.makeText(this@FloatingIconService, "Icon Clicked!", Toast.LENGTH_SHORT).show()
-                        // Handle click action here
                     } else {
-                        // Drag detected
                         if (isViewOverlapping(floatingView, binView)) {
-                            stopSelf() // Remove floating icon and text
+                            stopSelf()
                         }
                     }
                     true
@@ -156,24 +151,18 @@ class FloatingIconService : Service() {
         val rect2 = Rect()
         view2.getHitRect(rect2)
 
-        // Get absolute coordinates for view1
         val location1 = IntArray(2)
         view1.getLocationOnScreen(location1)
         rect1.offsetTo(location1[0], location1[1])
 
-
-        // Get absolute coordinates for view2 (binView is already in absolute coords due to WindowManager)
-        // For binView, its params.x and params.y are relative to its gravity.
-        // We need to convert its gravity-based (bottom-left) coordinates to screen coordinates.
         val binScreenX = binParams.x
-        val binScreenY = screenHeight - binView.height - binParams.y // screenHeight - viewHeight - marginBottom
+        val binScreenY = screenHeight - binView.height - binParams.y
 
         val rect2Screen = Rect(binScreenX, binScreenY,
             binScreenX + view2.width, binScreenY + view2.height)
 
         return Rect.intersects(rect1, rect2Screen)
     }
-
 
     private fun updateText(text: String) {
         if (text.isNotEmpty()) {
@@ -185,9 +174,12 @@ class FloatingIconService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        textDisplayHandler.removeCallbacksAndMessages(null) // Cancel any pending hide operations
         intent?.getStringExtra("text_to_display")?.let {
-            Handler(Looper.getMainLooper()).removeCallbacksAndMessages(null)
             updateText(it)
+            // If you want the text to auto-hide after some time, you can add postDelayed here.
+            // For example, to hide after 5 seconds:
+            // textDisplayHandler.postDelayed({ updateText("") }, 5000)
         }
         return START_NOT_STICKY
     }
@@ -200,6 +192,6 @@ class FloatingIconService : Service() {
         if (::binView.isInitialized && binView.parent != null) {
             windowManager.removeView(binView)
         }
-        Handler(Looper.getMainLooper()).removeCallbacksAndMessages(null)
+        textDisplayHandler.removeCallbacksAndMessages(null)
     }
 }
