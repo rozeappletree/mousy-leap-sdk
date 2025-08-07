@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.ContextCompat
 import com.example.local_ai.ui.theme.LocalaiTheme
 
 class MainActivity : ComponentActivity() {
@@ -28,6 +29,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         setContent {
             LocalaiTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -38,18 +40,11 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        Text(text = "Local AI Quote Generator")
                         Button(onClick = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this@MainActivity)) {
-                                val intent = Intent(
-                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                    Uri.parse("package:$packageName")
-                                )
-                                startActivityForResult(intent, OVERLAY_PERMISSION_REQUEST_CODE)
-                            } else {
-                                startFloatingIconService()
-                            }
+                            requestOverlayPermissionAndStartService()
                         }) {
-                            Text("Show Floating Icon")
+                            Text("Show Floating Icon & Start Quotes")
                         }
                     }
                 }
@@ -57,8 +52,30 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun requestOverlayPermissionAndStartService() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this@MainActivity)) {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            )
+            startActivityForResult(intent, OVERLAY_PERMISSION_REQUEST_CODE)
+        } else {
+            startFloatingIconService()
+        }
+    }
+
     private fun startFloatingIconService() {
-        startService(Intent(this, FloatingIconService::class.java))
+        val intent = Intent(this, FloatingIconService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ContextCompat.startForegroundService(this, intent)
+        } else {
+            startService(intent)
+        }
+    }
+
+     private fun stopFloatingIconService() {
+        val intent = Intent(this, FloatingIconService::class.java)
+        stopService(intent)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -71,6 +88,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// Keeping Greeting and Preview for now, can be removed if not needed.
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(
