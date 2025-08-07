@@ -1,3 +1,3 @@
-# `My AI Expert`
+# `Mousy`
 
-Local. Private. AI.
+Silly, local, hovering quote generator application
