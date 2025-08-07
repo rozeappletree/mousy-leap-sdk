@@ -194,50 +194,66 @@ class FloatingIconService : Service() {
 
     private suspend fun loadModelAndStartGeneration(onStatusChange: (String) -> Unit, onError: (Throwable) -> Unit) {
         try {
-            onStatusChange("Resolving model...")
+            val resolvingMsg = "Resolving model..."
+            onStatusChange(resolvingMsg)
+            updateText(resolvingMsg)
             val modelToUse = LeapDownloadableModel.resolve(MODEL_SLUG, QUANTIZATION_SLUG)
             if (modelToUse == null) {
                 throw RuntimeException("Model $QUANTIZATION_SLUG not found in Leap Model Library!")
             }
 
             val modelDownloader = LeapModelDownloader(applicationContext)
-            onStatusChange("Checking model download status...")
+            val checkingStatusMsg = "Checking download status..."
+            onStatusChange(checkingStatusMsg)
+            updateText(checkingStatusMsg)
 
             if (modelDownloader.queryStatus(modelToUse).type != LeapModelDownloader.ModelDownloadStatusType.DOWNLOADED) {
-                onStatusChange("Requesting model download...")
+                val requestingDownloadMsg = "Requesting model download..."
+                onStatusChange(requestingDownloadMsg)
+                // updateText(requestingDownloadMsg) // This is brief, loop gives better live status.
+                Log.d(TAG, "MODEL DOWNLOAD CODE IS BEING TRIGGERED")
                 modelDownloader.requestDownloadModel(modelToUse)
                 var isModelAvailable = false
                 while (!isModelAvailable) {
                     val status = modelDownloader.queryStatus(modelToUse)
+                    var currentStatusMsg = ""
                     when (status.type) {
                         LeapModelDownloader.ModelDownloadStatusType.NOT_ON_LOCAL -> {
-                            onStatusChange("Model not downloaded. Waiting...")
+                            currentStatusMsg = "Model not downloaded. Waiting..."
                         }
                         LeapModelDownloader.ModelDownloadStatusType.DOWNLOAD_IN_PROGRESS -> {
-                            onStatusChange(
-                                "Downloading: ${String.format("%.2f", status.progress * 100.0)}%"
-                            )
+                            currentStatusMsg = "Downloading: ${String.format("%.2f", status.progress * 100.0)}%"
                         }
                         LeapModelDownloader.ModelDownloadStatusType.DOWNLOADED -> {
-                            onStatusChange("Model downloaded.")
+                            currentStatusMsg = "Model downloaded."
                             isModelAvailable = true
                         }
                     }
-                    delay(1000) // Check status every second
+                    onStatusChange(currentStatusMsg)
+                    updateText(currentStatusMsg)
+                    if (!isModelAvailable) {
+                         delay(1000) // Check status every second
+                    }
                 }
             } else {
-                onStatusChange("Model already downloaded.")
+                val alreadyDownloadedMsg = "Model already downloaded."
+                onStatusChange(alreadyDownloadedMsg)
+                updateText(alreadyDownloadedMsg)
             }
 
             val modelFile = modelDownloader.getModelFile(modelToUse)
-            onStatusChange("Loading model from: ${modelFile.path}")
-            this.modelRunner = LeapClient.loadModel(modelFile.path) // this. refers to service instance
-            onStatusChange("Model loaded. Starting quote generation.")
-            updateText("Generating quote...")
+            val loadingFromFileMsg = "Loading model..."
+            onStatusChange("Loading model from: ${modelFile.path}") // Notification gets detailed path
+            updateText(loadingFromFileMsg) // UI gets simpler message
+            this.modelRunner = LeapClient.loadModel(modelFile.path)
+
+            val modelLoadedMsg = "Model loaded. Starting quote generation."
+            onStatusChange(modelLoadedMsg)
+            updateText("Generating quote...") // Keep this specific for UI
             startPeriodicQuoteGeneration()
         } catch (e: Exception) {
             Log.e(TAG, "Error in loadModelAndStartGeneration", e)
-            onError(e)
+            onError(e) // This will call updateText("Error loading model.")
         }
     }
 
