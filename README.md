@@ -4,4 +4,4 @@
 
 A silly, local, hovering quote generator android application built with [LEAP SDK](https://leap.liquid.ai/) by [LiquidAI](https://www.liquid.ai/).
 
-[Download APK (click here)](https://github.com/rozeappletree/mousy-leap-sdk/releases/download/beta-0.0.1/mousy.apk) 🥸
+[Download APK (click here)](https://github.com/rozeappletree/mousy-leap-sdk/releases/download/beta-0.0.1/mousy.apk) 
