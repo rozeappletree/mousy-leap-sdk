@@ -9,3 +9,5 @@ A silly, local, hovering quote generator android application built with [LEAP SD
 
 https://github.com/user-attachments/assets/d073c4e5-0ae5-4fd1-be4c-ac9fef9c81b2
 
+---
+Built with ❤️ and no ☕
