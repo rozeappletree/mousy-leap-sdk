@@ -1,5 +1,17 @@
 package com.example.local_ai
 
+import ai.liquid.leap.Conversation
+import ai.liquid.leap.LeapClient
+import ai.liquid.leap.LeapModelLoadingException
+import ai.liquid.leap.ModelRunner
+import ai.liquid.leap.gson.LeapGson
+import ai.liquid.leap.gson.registerLeapAdapters
+import ai.liquid.leap.message.ChatMessage
+import ai.liquid.leap.downloader.LeapModelDownloader
+import ai.liquid.leap.downloader.LeapDownloadableModel
+import ai.liquid.leap.message.ChatMessageContent
+import ai.liquid.leap.message.MessageResponse
+
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
